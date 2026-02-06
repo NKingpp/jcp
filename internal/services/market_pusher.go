@@ -174,6 +174,11 @@ func (p *MarketDataPusher) pushLoop() {
 
 // pushStockData 推送股票实时数据
 func (p *MarketDataPusher) pushStockData() {
+	defer func() {
+		if r := recover(); r != nil {
+			// 忽略 panic
+		}
+	}()
 	p.mu.RLock()
 	codes := make([]string, len(p.subscribedCodes))
 	copy(codes, p.subscribedCodes)
@@ -194,6 +199,11 @@ func (p *MarketDataPusher) pushStockData() {
 
 // pushOrderBookData 推送盘口数据
 func (p *MarketDataPusher) pushOrderBookData() {
+	defer func() {
+		if r := recover(); r != nil {
+			// 忽略 panic
+		}
+	}()
 	p.mu.RLock()
 	code := p.currentOrderBook
 	p.mu.RUnlock()
@@ -214,6 +224,11 @@ func (p *MarketDataPusher) pushOrderBookData() {
 
 // pushTelegraphData 推送快讯数据
 func (p *MarketDataPusher) pushTelegraphData() {
+	defer func() {
+		if r := recover(); r != nil {
+			// 忽略 panic
+		}
+	}()
 	if p.newsService == nil {
 		return
 	}
@@ -241,12 +256,22 @@ func (p *MarketDataPusher) pushTelegraphData() {
 
 // pushMarketStatus 推送市场状态
 func (p *MarketDataPusher) pushMarketStatus() {
+	defer func() {
+		if r := recover(); r != nil {
+			// 忽略 panic，避免崩溃
+		}
+	}()
 	status := p.marketService.GetMarketStatus()
 	runtime.EventsEmit(p.ctx, EventMarketStatusUpdate, status)
 }
 
 // pushMarketIndices 推送大盘指数
 func (p *MarketDataPusher) pushMarketIndices() {
+	defer func() {
+		if r := recover(); r != nil {
+			// 忽略 panic，避免崩溃
+		}
+	}()
 	indices, err := p.marketService.GetMarketIndices()
 	if err != nil {
 		return
