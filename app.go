@@ -42,6 +42,9 @@ type App struct {
 func NewApp() *App {
 	dataDir := getDataDir()
 
+	// 迁移旧数据目录（如果存在）
+	migrateDataDir(dataDir)
+
 	// 初始化文件日志
 	if err := logger.InitFileLogger(filepath.Join(dataDir, "logs")); err != nil {
 		log.Error("初始化文件日志失败: %v", err)
@@ -137,6 +140,108 @@ func getDataDir() string {
 		return filepath.Join(".", "data")
 	}
 	return filepath.Join(userConfigDir, "jcp")
+}
+
+// migrateDataDir 迁移旧数据目录到新位置
+// 仅在新目录为空且旧目录存在时执行迁移
+func migrateDataDir(newDataDir string) {
+	oldDataDir := filepath.Join(".", "data")
+
+	// 检查旧目录是否存在
+	if _, err := os.Stat(oldDataDir); os.IsNotExist(err) {
+		return
+	}
+
+	// 如果新旧路径相同，无需迁移
+	absOld, _ := filepath.Abs(oldDataDir)
+	absNew, _ := filepath.Abs(newDataDir)
+	if absOld == absNew {
+		return
+	}
+
+	// 检查新目录是否已有数据（存在 config.json 表示已迁移）
+	if _, err := os.Stat(filepath.Join(newDataDir, "config.json")); err == nil {
+		return
+	}
+
+	log.Info("检测到旧数据目录，开始迁移: %s -> %s", oldDataDir, newDataDir)
+
+	// 确保新目录存在
+	if err := os.MkdirAll(newDataDir, 0755); err != nil {
+		log.Error("创建新数据目录失败: %v", err)
+		return
+	}
+
+	// 需要迁移的文件和目录
+	items := []string{
+		"config.json",
+		"agents.json",
+		"watchlist.json",
+		"stock_basic.json",
+		"sessions",
+		"memories",
+	}
+
+	for _, item := range items {
+		src := filepath.Join(oldDataDir, item)
+		dst := filepath.Join(newDataDir, item)
+
+		if _, err := os.Stat(src); os.IsNotExist(err) {
+			continue
+		}
+
+		if err := copyPath(src, dst); err != nil {
+			log.Error("迁移 %s 失败: %v", item, err)
+		} else {
+			log.Info("迁移成功: %s", item)
+		}
+	}
+
+	log.Info("数据迁移完成")
+}
+
+// copyPath 复制文件或目录
+func copyPath(src, dst string) error {
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if info.IsDir() {
+		return copyDir(src, dst)
+	}
+	return copyFile(src, dst)
+}
+
+// copyFile 复制单个文件
+func copyFile(src, dst string) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, data, 0644)
+}
+
+// copyDir 递归复制目录
+func copyDir(src, dst string) error {
+	if err := os.MkdirAll(dst, 0755); err != nil {
+		return err
+	}
+
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+
+		if err := copyPath(srcPath, dstPath); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // startup is called when the app starts. The context is saved
