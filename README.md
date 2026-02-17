@@ -301,7 +301,14 @@ curl -X POST http://localhost:8080/configure \
 ```
 
 ### 安装到 OpenClaw
-#### 方法 0: 直接复制链接发送给 openclaw，让它自己安装 skill
+#### 方法 0: 直接复制链接发送给 openclaw，让它自己安装 skill,然后使用如下提示词配置 ai。
+```
+继续帮我配置 LLM API：
+Provider:openai
+Base URL: https://integrate.api.nvidia.com/v1/
+API Key :nvapi-xxxxxxxxxxxxx
+Model Name:moonshotai/kimi-k2.5
+```
 
 #### 方法 1: 全局安装 (推荐所有用户)
 
